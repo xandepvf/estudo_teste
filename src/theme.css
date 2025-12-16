@@ -1,17 +1,21 @@
-@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;700&family=Lato:wght@300;400;700&display=swap');
 
 :root {
   --bg-color: #fdfbf7;
-  --text-primary: #4a3b32;
-  --text-secondary: #8c7b70;
+  --text-primary: #2c2420; /* Tom mais escuro para contraste profissional */
+  --text-secondary: #6d6159;
   --accent-color: #c5a065;
+  --accent-hover: #b08d55;
   --white: #ffffff;
+  --success: #2e7d32;
+  --error: #d32f2f;
 }
 
 body {
   background-color: var(--bg-color);
   color: var(--text-primary);
   font-family: 'Lato', sans-serif;
+  -webkit-font-smoothing: antialiased;
 }
 
 .font-cinzel { font-family: 'Cinzel', serif; }
@@ -19,51 +23,95 @@ body {
 h1, h2, h3, h4, h5, .navbar-brand {
   font-family: 'Cinzel', serif;
   font-weight: 700;
+  letter-spacing: -0.5px;
 }
 
+/* Botões Profissionais */
 .btn-primary-custom {
   background-color: var(--text-primary);
   color: var(--white);
-  border: none;
+  border: 1px solid var(--text-primary);
   text-transform: uppercase;
   letter-spacing: 1px;
-  transition: all 0.3s ease;
+  font-weight: 700;
+  font-size: 0.85rem;
+  padding: 0.8rem 1.5rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
-.btn-primary-custom:hover {
+.btn-primary-custom:hover:not(:disabled) {
   background-color: var(--accent-color);
+  border-color: var(--accent-color);
   color: var(--white);
   transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(197, 160, 101, 0.3);
 }
 
+.btn-primary-custom:disabled {
+  background-color: #ccc;
+  border-color: #ccc;
+  cursor: not-allowed;
+}
+
+/* Cards com Design Elevado */
 .card-custom {
   background: var(--white);
-  border: none;
+  border: 1px solid rgba(0,0,0,0.05);
   transition: all 0.4s ease;
 }
 
 .card-custom:hover {
   transform: translateY(-5px);
-  box-shadow: 0 15px 30px rgba(74, 59, 50, 0.1);
+  box-shadow: 0 20px 40px rgba(0,0,0,0.08);
+  border-color: rgba(197, 160, 101, 0.3);
 }
 
 .text-primary-custom { color: var(--text-primary); }
 .text-accent { color: var(--accent-color); }
 
+/* Inputs Estilizados */
+.form-control {
+    border-radius: 0;
+    padding: 0.8rem 1rem;
+    border: 1px solid #e0e0e0;
+}
+
+.form-control:focus {
+    box-shadow: none;
+    border-color: var(--accent-color);
+}
+
 /* Animações */
-.fade-in { animation: fadeIn 0.5s ease-in; }
-.fade-in-up { animation: fadeInUp 0.8s ease-out; }
+.fade-in { animation: fadeIn 0.6s ease-out forwards; opacity: 0; }
+.fade-in-up { animation: fadeInUp 0.8s ease-out forwards; opacity: 0; }
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
 
 /* Efeito de Zoom (Home) */
 .hover-zoom-card { overflow: hidden; position: relative; border-radius: 0; }
-.hover-zoom-img { transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94); width: 100%; height: 100%; object-fit: cover; }
-.hover-zoom-card:hover .hover-zoom-img { transform: scale(1.1); }
-.hover-overlay { background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); position: absolute; bottom: 0; left: 0; width: 100%; padding: 2rem; color: white; pointer-events: none; }
+.hover-zoom-img { transition: transform 0.8s cubic-bezier(0.25, 0.46, 0.45, 0.94); width: 100%; height: 100%; object-fit: cover; }
+.hover-zoom-card:hover .hover-zoom-img { transform: scale(1.08); }
+.hover-overlay { 
+    background: linear-gradient(to top, rgba(0,0,0,0.6) 0%, transparent 60%); 
+    position: absolute; bottom: 0; left: 0; width: 100%; height: 100%; 
+    display: flex; align-items: flex-end; padding: 2rem; color: white; pointer-events: none; 
+}
 
-
-/* --- ADICIONE NO FINAL DO theme.css --- */
 .animate-spin { animation: spin 1s linear infinite; }
 @keyframes spin { 100% { transform: rotate(360deg); } }
+
+/* Badge de desconto */
+.badge-discount {
+    position: absolute;
+    top: 10px;
+    left: 10px;
+    background-color: var(--error);
+    color: white;
+    padding: 4px 8px;
+    font-size: 0.7rem;
+    font-weight: bold;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    z-index: 2;
+}

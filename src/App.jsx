@@ -46,10 +46,10 @@ function App() {
   // Marketing & Suporte
   const [cupons, setCupons] = useState(() => JSON.parse(localStorage.getItem('loja_cupons')) || [{codigo: 'BEMVINDO10', desconto: 10}]);
   const [newsletter, setNewsletter] = useState(() => JSON.parse(localStorage.getItem('loja_newsletter')) || []);
-  const [mensagens, setMensagens] = useState(() => JSON.parse(localStorage.getItem('loja_mensagens')) || []); // NOVO
+  const [mensagens, setMensagens] = useState(() => JSON.parse(localStorage.getItem('loja_mensagens')) || []);
   
   // Logística (Endereços Salvos)
-  const [enderecos, setEnderecos] = useState(() => JSON.parse(localStorage.getItem('loja_enderecos')) || []); // NOVO
+  const [enderecos, setEnderecos] = useState(() => JSON.parse(localStorage.getItem('loja_enderecos')) || []);
   const [recentes, setRecentes] = useState(() => JSON.parse(localStorage.getItem('loja_recentes')) || []);
 
   const [termoBusca, setTermoBusca] = useState("");
@@ -63,18 +63,23 @@ function App() {
   useEffect(() => { localStorage.setItem('loja_avaliacoes', JSON.stringify(avaliacoes)); }, [avaliacoes]);
   useEffect(() => { localStorage.setItem('loja_cupons', JSON.stringify(cupons)); }, [cupons]);
   useEffect(() => { localStorage.setItem('loja_newsletter', JSON.stringify(newsletter)); }, [newsletter]);
-  useEffect(() => { localStorage.setItem('loja_mensagens', JSON.stringify(mensagens)); }, [mensagens]); // NOVO
-  useEffect(() => { localStorage.setItem('loja_enderecos', JSON.stringify(enderecos)); }, [enderecos]); // NOVO
+  useEffect(() => { localStorage.setItem('loja_mensagens', JSON.stringify(mensagens)); }, [mensagens]);
+  useEffect(() => { localStorage.setItem('loja_enderecos', JSON.stringify(enderecos)); }, [enderecos]);
   useEffect(() => { localStorage.setItem('loja_recentes', JSON.stringify(recentes)); }, [recentes]);
   
+  // Sincroniza favoritos com o usuário logado
   useEffect(() => {
     if (userLogado) {
       const usuariosAtualizados = usuarios.map(u => u.email === userLogado.email ? { ...u, favoritosSalvos: favoritos } : u);
       localStorage.setItem('loja_usuarios', JSON.stringify(usuariosAtualizados));
       localStorage.setItem('loja_sessao', JSON.stringify({ ...userLogado, favoritosSalvos: favoritos }));
+      // Salva também no storage geral para persistência
       localStorage.setItem('loja_favoritos', JSON.stringify(favoritos));
+    } else {
+       // Se não estiver logado, garante que o storage local de favoritos esteja atualizado para guests
+       localStorage.setItem('loja_favoritos', JSON.stringify(favoritos));
     }
-  }, [favoritos, userLogado]); 
+  }, [favoritos, userLogado]); // Removido 'usuarios' da dependência para evitar loop se não mudar
 
   // --- NOVAS FUNÇÕES ---
   const enviarMensagemContato = (msg) => {
@@ -99,21 +104,109 @@ function App() {
 
   // --- FUNÇÕES EXISTENTES ---
   const adicionarAosRecentes = (p) => { setRecentes(prev => [p, ...prev.filter(x=>x.id!==p.id)].slice(0,4)); };
-  const registrarUsuario = (novo) => { if(usuarios.some(u=>u.email===novo.email)) return setToastMsg("Email em uso."); const u={...novo, favoritosSalvos:[], dataCadastro: new Date().toLocaleDateString()}; setUsuarios([...usuarios, u]); setUserLogado(u); setFavoritos([]); setToastMsg(`Bem-vindo ${novo.nome}!`); };
-  const loginUsuario = (email, senha) => { const u = usuarios.find(x=>x.email===email && x.senha===senha); if(u){ setUserLogado(u); setFavoritos(u.favoritosSalvos||[]); setToastMsg("Logado!"); return true; } return false; };
-  const logoutUsuario = () => { setUserLogado(null); setFavoritos([]); localStorage.removeItem('loja_sessao'); setToastMsg("Saiu."); };
-  const atualizarUsuario = (u) => { setUsuarios(usuarios.map(x=>x.email===u.email?u:x)); setUserLogado(u); setToastMsg("Perfil salvo!"); };
-  const adminEditarUsuario = (antigo, novo) => { if(antigo!==novo.email && usuarios.some(u=>u.email===novo.email)) return setToastMsg("Email em uso!"); setUsuarios(usuarios.map(u=>u.email===antigo?{...u,...novo}:u)); if(userLogado.email===antigo) setUserLogado({...userLogado,...novo}); setToastMsg("Atualizado!"); };
+  
+  const registrarUsuario = (novo) => { 
+      if(usuarios.some(u=>u.email===novo.email)) return setToastMsg("Email em uso."); 
+      const u={...novo, favoritosSalvos:[], dataCadastro: new Date().toLocaleDateString()}; 
+      setUsuarios([...usuarios, u]); 
+      setUserLogado(u); 
+      setFavoritos([]); 
+      setToastMsg(`Bem-vindo ${novo.nome}!`); 
+  };
+  
+  const loginUsuario = (email, senha) => { 
+      const u = usuarios.find(x=>x.email===email && x.senha===senha); 
+      if(u){ 
+          setUserLogado(u); 
+          // Opcional: Aqui você poderia mesclar favoritos do guest com os do usuário
+          setFavoritos(u.favoritosSalvos||[]); 
+          setToastMsg("Logado!"); 
+          return true; 
+      } 
+      return false; 
+  };
+  
+  const logoutUsuario = () => { 
+      setUserLogado(null); 
+      setFavoritos([]); 
+      localStorage.removeItem('loja_sessao'); 
+      setToastMsg("Saiu."); 
+  };
+  
+  const atualizarUsuario = (u) => { 
+      setUsuarios(usuarios.map(x=>x.email===u.email?u:x)); 
+      setUserLogado(u); 
+      setToastMsg("Perfil salvo!"); 
+  };
+  
+  const adminEditarUsuario = (antigo, novo) => { 
+      if(antigo!==novo.email && usuarios.some(u=>u.email===novo.email)) return setToastMsg("Email em uso!"); 
+      setUsuarios(usuarios.map(u=>u.email===antigo?{...u,...novo}:u)); 
+      if(userLogado.email===antigo) setUserLogado({...userLogado,...novo}); 
+      setToastMsg("Atualizado!"); 
+  };
+  
   const adicionarCupom = (n) => { setCupons([...cupons, n]); setToastMsg("Cupom criado!"); };
   const removerCupom = (c) => { setCupons(cupons.filter(x=>x.codigo!==c)); setToastMsg("Removido."); };
   const assinarNewsletter = (e) => { if(!newsletter.includes(e)){setNewsletter([...newsletter,e]); setToastMsg("Inscrito!");} else setToastMsg("Já na lista."); };
   const adicionarProdutoNovo = (p) => { setProdutos([{...p, estoque: Number(p.estoque)||10}, ...produtos]); setToastMsg("Criado!"); };
   const removerProduto = (id) => { setProdutos(produtos.filter(p => p.id !== id)); setToastMsg("Removido."); };
-  const toggleFavorito = (p) => { if(!userLogado) return setToastMsg("Login necessário."); if(favoritos.some(f=>f.id===p.id)) { setFavoritos(favoritos.filter(f=>f.id!==p.id)); setToastMsg("Removido."); } else { setFavoritos([...favoritos, p]); setToastMsg("Salvo!"); } };
-  const adicionarAoCarrinho = (p) => { if(p.estoque<=0) return setToastMsg("Esgotado."); setCarrinho(prev => { const ex=prev.find(i=>i.id===p.id); if(ex && ex.quantidade>=p.estoque) return prev; if(ex) { setToastMsg("Qtd atualizada."); return prev.map(i=>i.id===p.id?{...i,quantidade:i.quantidade+1}:i); } setToastMsg("Adicionado."); return [...prev, {...p, quantidade:1}]; }); };
+  
+  // --- FAVORITOS (Sem restrição de login conforme pedido anterior) ---
+  const toggleFavorito = (p) => { 
+      if(favoritos.some(f=>f.id===p.id)) { 
+          setFavoritos(favoritos.filter(f=>f.id!==p.id)); 
+          setToastMsg("Removido dos favoritos."); 
+      } else { 
+          setFavoritos([...favoritos, p]); 
+          setToastMsg("Salvo nos favoritos!"); 
+      } 
+  };
+  
+  // --- CARRINHO (Com restrição de login) ---
+  const adicionarAoCarrinho = (p) => { 
+      // Verificação de login adicionada aqui
+      if (!userLogado) {
+          setToastMsg("Faça login para adicionar à sacola.");
+          return;
+      }
+
+      if(p.estoque<=0) return setToastMsg("Esgotado."); 
+      setCarrinho(prev => { 
+          const ex=prev.find(i=>i.id===p.id); 
+          if(ex && ex.quantidade>=p.estoque) return prev; 
+          if(ex) { 
+              setToastMsg("Qtd atualizada."); 
+              return prev.map(i=>i.id===p.id?{...i,quantidade:i.quantidade+1}:i); 
+          } 
+          setToastMsg("Adicionado à sacola."); 
+          return [...prev, {...p, quantidade:1}]; 
+      }); 
+  };
+  
   const removerDoCarrinho = (id) => setCarrinho(prev=>prev.filter(i=>i.id!==id));
   const atualizarQtd = (id, d) => setCarrinho(prev=>prev.map(i=>{ if(i.id===id){ const q=i.quantidade+d; if(q>i.estoque)return i; return {...i, quantidade:Math.max(1,q)}; } return i; }));
-  const realizarPedido = (d, t) => { const np = { id: Math.floor(Math.random()*100000), data: new Date().toLocaleDateString(), hora: new Date().toLocaleTimeString(), cliente: userLogado?userLogado.nome:d.nome, emailCliente: userLogado?userLogado.email:'guest', total: t, itens: carrinho, status: "Processando" }; setProdutos(produtos.map(p=>{ const i=carrinho.find(x=>x.id===p.id); return i ? {...p, estoque:Math.max(0, p.estoque-i.quantidade)} : p; })); setPedidos([np, ...pedidos]); setCarrinho([]); return np.id; };
+  
+  const realizarPedido = (d, t) => { 
+      const np = { 
+          id: Math.floor(Math.random()*100000), 
+          data: new Date().toLocaleDateString(), 
+          hora: new Date().toLocaleTimeString(), 
+          cliente: userLogado?userLogado.nome:d.nome, 
+          emailCliente: userLogado?userLogado.email:'guest', 
+          total: t, 
+          itens: carrinho, 
+          status: "Processando" 
+      }; 
+      setProdutos(produtos.map(p=>{ 
+          const i=carrinho.find(x=>x.id===p.id); 
+          return i ? {...p, estoque:Math.max(0, p.estoque-i.quantidade)} : p; 
+      })); 
+      setPedidos([np, ...pedidos]); 
+      setCarrinho([]); 
+      return np.id; 
+  };
+  
   const atualizarStatusPedido = (id, st) => { setPedidos(pedidos.map(p=>p.id===id?{...p, status:st}:p)); setToastMsg(`Status: ${st}`); };
   const adicionarAvaliacao = (r) => { setAvaliacoes([r, ...avaliacoes]); setToastMsg("Avaliado!"); };
 
@@ -131,13 +224,11 @@ function App() {
           <Route path="/wishlist" element={<Wishlist favoritos={favoritos} toggleFav={toggleFavorito} />} />
           <Route path="/checkout" element={<Checkout cartItems={carrinho} onPlaceOrder={realizarPedido} notify={setToastMsg} cuponsDisponiveis={cupons}/>} />
           
-          {/* Rota Admin com Suporte a Mensagens */}
           <Route path="/admin" element={<Admin onAddProduct={adicionarProdutoNovo} onRemoveProduct={removerProduto} pedidos={pedidos} produtos={produtos} onUpdateStatus={atualizarStatusPedido} userLogado={userLogado} listaUsuarios={usuarios} onRemoveUser={(email)=>setUsuarios(usuarios.filter(u=>u.email!==email))} onEditUser={adminEditarUsuario} cupons={cupons} onAddCoupon={adicionarCupom} onRemoveCoupon={removerCupom} listaNewsletter={newsletter} mensagens={mensagens} onResolverMensagem={resolverMensagem}/>} />
           
           <Route path="/register" element={<Register onRegister={registrarUsuario} />} />
           <Route path="/login" element={<Login onLogin={loginUsuario} />} />
           
-          {/* Rota Profile com Endereços */}
           <Route path="/profile" element={<Profile user={userLogado} onLogout={logoutUsuario} onUpdateUser={atualizarUsuario} favoritos={favoritos} pedidos={pedidos} enderecos={enderecos} onSaveAddress={salvarEndereco} onRemoveAddress={removerEndereco}/>} />
           
           <Route path="/about" element={<About />} />
