@@ -1,0 +1,69 @@
+@import url('https://fonts.googleapis.com/css2?family=Cinzel:wght@400;700&family=Lato:wght@300;400;700&display=swap');
+
+:root {
+  --bg-color: #fdfbf7;
+  --text-primary: #4a3b32;
+  --text-secondary: #8c7b70;
+  --accent-color: #c5a065;
+  --white: #ffffff;
+}
+
+body {
+  background-color: var(--bg-color);
+  color: var(--text-primary);
+  font-family: 'Lato', sans-serif;
+}
+
+.font-cinzel { font-family: 'Cinzel', serif; }
+
+h1, h2, h3, h4, h5, .navbar-brand {
+  font-family: 'Cinzel', serif;
+  font-weight: 700;
+}
+
+.btn-primary-custom {
+  background-color: var(--text-primary);
+  color: var(--white);
+  border: none;
+  text-transform: uppercase;
+  letter-spacing: 1px;
+  transition: all 0.3s ease;
+}
+
+.btn-primary-custom:hover {
+  background-color: var(--accent-color);
+  color: var(--white);
+  transform: translateY(-2px);
+}
+
+.card-custom {
+  background: var(--white);
+  border: none;
+  transition: all 0.4s ease;
+}
+
+.card-custom:hover {
+  transform: translateY(-5px);
+  box-shadow: 0 15px 30px rgba(74, 59, 50, 0.1);
+}
+
+.text-primary-custom { color: var(--text-primary); }
+.text-accent { color: var(--accent-color); }
+
+/* Animações */
+.fade-in { animation: fadeIn 0.5s ease-in; }
+.fade-in-up { animation: fadeInUp 0.8s ease-out; }
+
+@keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fadeInUp { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
+
+/* Efeito de Zoom (Home) */
+.hover-zoom-card { overflow: hidden; position: relative; border-radius: 0; }
+.hover-zoom-img { transition: transform 0.6s cubic-bezier(0.25, 0.46, 0.45, 0.94); width: 100%; height: 100%; object-fit: cover; }
+.hover-zoom-card:hover .hover-zoom-img { transform: scale(1.1); }
+.hover-overlay { background: linear-gradient(to top, rgba(0,0,0,0.7), transparent); position: absolute; bottom: 0; left: 0; width: 100%; padding: 2rem; color: white; pointer-events: none; }
+
+
+/* --- ADICIONE NO FINAL DO theme.css --- */
+.animate-spin { animation: spin 1s linear infinite; }
+@keyframes spin { 100% { transform: rotate(360deg); } }
