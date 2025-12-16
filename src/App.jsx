@@ -23,6 +23,22 @@ import { Tracking } from './pages/Tracking';
 
 import { PRODUTOS_INICIAIS } from './data';
 
+// --- SERVIÇOS FIREBASE (Descomente quando configurar o backend) ---
+// import { db, auth, initAuth, getPublicCollection, getUserCollection } from './services/firebase';
+// import { onSnapshot, addDoc, doc, setDoc } from 'firebase/firestore';
+// import { onAuthStateChanged } from 'firebase/auth';
+
+// Função auxiliar segura para ler do localStorage
+const carregarDados = (chave, valorPadrao) => {
+  try {
+    const item = localStorage.getItem(chave);
+    return item ? JSON.parse(item) : valorPadrao;
+  } catch (error) {
+    console.error(`Erro ao carregar ${chave}:`, error);
+    return valorPadrao;
+  }
+};
+
 function ScrollToTop() {
   const { pathname } = useLocation();
   useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
@@ -30,32 +46,41 @@ function ScrollToTop() {
 }
 
 function App() {
-  // --- ESTADOS ---
-  const [produtos, setProdutos] = useState(() => {
-    const salvos = localStorage.getItem('loja_produtos');
-    return salvos ? JSON.parse(salvos) : PRODUTOS_INICIAIS;
-  });
-  
-  const [usuarios, setUsuarios] = useState(() => JSON.parse(localStorage.getItem('loja_usuarios')) || []);
-  const [userLogado, setUserLogado] = useState(() => JSON.parse(localStorage.getItem('loja_sessao')) || null);
-  const [carrinho, setCarrinho] = useState(() => JSON.parse(localStorage.getItem('loja_carrinho')) || []);
-  const [favoritos, setFavoritos] = useState(() => JSON.parse(localStorage.getItem('loja_favoritos')) || []);
-  const [pedidos, setPedidos] = useState(() => JSON.parse(localStorage.getItem('loja_pedidos')) || []);
-  const [avaliacoes, setAvaliacoes] = useState(() => JSON.parse(localStorage.getItem('loja_avaliacoes')) || []);
+  // --- ESTADOS COM CARREGAMENTO SEGURO (LocalStorage) ---
+  // Se usar Firebase, inicie como [] ou null e deixe o useEffect preencher
+  const [produtos, setProdutos] = useState(() => carregarDados('loja_produtos', PRODUTOS_INICIAIS));
+  const [usuarios, setUsuarios] = useState(() => carregarDados('loja_usuarios', []));
+  const [userLogado, setUserLogado] = useState(() => carregarDados('loja_sessao', null));
+  const [carrinho, setCarrinho] = useState(() => carregarDados('loja_carrinho', []));
+  const [favoritos, setFavoritos] = useState(() => carregarDados('loja_favoritos', []));
+  const [pedidos, setPedidos] = useState(() => carregarDados('loja_pedidos', []));
+  const [avaliacoes, setAvaliacoes] = useState(() => carregarDados('loja_avaliacoes', []));
   
   // Marketing & Suporte
-  const [cupons, setCupons] = useState(() => JSON.parse(localStorage.getItem('loja_cupons')) || [{codigo: 'BEMVINDO10', desconto: 10}]);
-  const [newsletter, setNewsletter] = useState(() => JSON.parse(localStorage.getItem('loja_newsletter')) || []);
-  const [mensagens, setMensagens] = useState(() => JSON.parse(localStorage.getItem('loja_mensagens')) || []);
+  const [cupons, setCupons] = useState(() => carregarDados('loja_cupons', [{codigo: 'BEMVINDO10', desconto: 10}]));
+  const [newsletter, setNewsletter] = useState(() => carregarDados('loja_newsletter', []));
+  const [mensagens, setMensagens] = useState(() => carregarDados('loja_mensagens', []));
   
   // Logística (Endereços Salvos)
-  const [enderecos, setEnderecos] = useState(() => JSON.parse(localStorage.getItem('loja_enderecos')) || []);
-  const [recentes, setRecentes] = useState(() => JSON.parse(localStorage.getItem('loja_recentes')) || []);
+  const [enderecos, setEnderecos] = useState(() => carregarDados('loja_enderecos', []));
+  const [recentes, setRecentes] = useState(() => carregarDados('loja_recentes', []));
 
   const [termoBusca, setTermoBusca] = useState("");
   const [toastMsg, setToastMsg] = useState(null);
 
-  // --- PERSISTÊNCIA ---
+  // --- EFEITO 1: INICIALIZAÇÃO FIREBASE (Exemplo) ---
+  /*
+  useEffect(() => {
+    const setup = async () => {
+      // await initAuth(); 
+    };
+    setup();
+    // const unsubscribe = onAuthStateChanged(auth, (u) => setUserLogado(u));
+    // return () => unsubscribe();
+  }, []);
+  */
+
+  // --- PERSISTÊNCIA (LocalStorage - Remova se usar Firebase) ---
   useEffect(() => { localStorage.setItem('loja_produtos', JSON.stringify(produtos)); }, [produtos]);
   useEffect(() => { localStorage.setItem('loja_usuarios', JSON.stringify(usuarios)); }, [usuarios]);
   useEffect(() => { localStorage.setItem('loja_carrinho', JSON.stringify(carrinho)); }, [carrinho]);
@@ -73,15 +98,13 @@ function App() {
       const usuariosAtualizados = usuarios.map(u => u.email === userLogado.email ? { ...u, favoritosSalvos: favoritos } : u);
       localStorage.setItem('loja_usuarios', JSON.stringify(usuariosAtualizados));
       localStorage.setItem('loja_sessao', JSON.stringify({ ...userLogado, favoritosSalvos: favoritos }));
-      // Salva também no storage geral para persistência
       localStorage.setItem('loja_favoritos', JSON.stringify(favoritos));
     } else {
-       // Se não estiver logado, garante que o storage local de favoritos esteja atualizado para guests
        localStorage.setItem('loja_favoritos', JSON.stringify(favoritos));
     }
-  }, [favoritos, userLogado]); // Removido 'usuarios' da dependência para evitar loop se não mudar
+  }, [favoritos, userLogado]); // Removido 'usuarios' da dependência para evitar loop
 
-  // --- NOVAS FUNÇÕES ---
+  // --- FUNÇÕES ---
   const enviarMensagemContato = (msg) => {
       setMensagens([{ ...msg, id: Date.now(), data: new Date().toLocaleDateString(), status: 'Pendente' }, ...mensagens]);
       setToastMsg("Mensagem enviada com sucesso!");
@@ -102,7 +125,6 @@ function App() {
       setToastMsg("Endereço removido.");
   };
 
-  // --- FUNÇÕES EXISTENTES ---
   const adicionarAosRecentes = (p) => { setRecentes(prev => [p, ...prev.filter(x=>x.id!==p.id)].slice(0,4)); };
   
   const registrarUsuario = (novo) => { 
@@ -118,12 +140,27 @@ function App() {
       const u = usuarios.find(x=>x.email===email && x.senha===senha); 
       if(u){ 
           setUserLogado(u); 
-          // Opcional: Aqui você poderia mesclar favoritos do guest com os do usuário
           setFavoritos(u.favoritosSalvos||[]); 
           setToastMsg("Logado!"); 
           return true; 
       } 
       return false; 
+  };
+
+  // --- FUNÇÃO DE RECUPERAÇÃO DE SENHA ---
+  const recuperarSenha = (email) => {
+      const usuarioExiste = usuarios.some(u => u.email === email);
+      
+      if (usuarioExiste) {
+          // Simulação de envio de e-mail (em produção usaria um serviço de backend)
+          console.log(`[SIMULAÇÃO] Enviando e-mail de recuperação para: ${email}`);
+          setToastMsg(`Um link de recuperação foi enviado para ${email}.`);
+          return true;
+      } else {
+          // Por segurança, geralmente não se diz se o e-mail não existe, mas aqui para UX:
+          setToastMsg("E-mail não encontrado na nossa base.");
+          return false;
+      }
   };
   
   const logoutUsuario = () => { 
@@ -152,7 +189,6 @@ function App() {
   const adicionarProdutoNovo = (p) => { setProdutos([{...p, estoque: Number(p.estoque)||10}, ...produtos]); setToastMsg("Criado!"); };
   const removerProduto = (id) => { setProdutos(produtos.filter(p => p.id !== id)); setToastMsg("Removido."); };
   
-  // --- FAVORITOS (Sem restrição de login conforme pedido anterior) ---
   const toggleFavorito = (p) => { 
       if(favoritos.some(f=>f.id===p.id)) { 
           setFavoritos(favoritos.filter(f=>f.id!==p.id)); 
@@ -163,14 +199,11 @@ function App() {
       } 
   };
   
-  // --- CARRINHO (Com restrição de login) ---
   const adicionarAoCarrinho = (p) => { 
-      // Verificação de login adicionada aqui
       if (!userLogado) {
           setToastMsg("Faça login para adicionar à sacola.");
           return;
       }
-
       if(p.estoque<=0) return setToastMsg("Esgotado."); 
       setCarrinho(prev => { 
           const ex=prev.find(i=>i.id===p.id); 
@@ -223,14 +256,11 @@ function App() {
           <Route path="/carrinho" element={<Cart cartItems={carrinho} updateQty={atualizarQtd} removeFromCart={removerDoCarrinho} produtos={produtos} addToCart={adicionarAoCarrinho}/>} />
           <Route path="/wishlist" element={<Wishlist favoritos={favoritos} toggleFav={toggleFavorito} />} />
           <Route path="/checkout" element={<Checkout cartItems={carrinho} onPlaceOrder={realizarPedido} notify={setToastMsg} cuponsDisponiveis={cupons}/>} />
-          
           <Route path="/admin" element={<Admin onAddProduct={adicionarProdutoNovo} onRemoveProduct={removerProduto} pedidos={pedidos} produtos={produtos} onUpdateStatus={atualizarStatusPedido} userLogado={userLogado} listaUsuarios={usuarios} onRemoveUser={(email)=>setUsuarios(usuarios.filter(u=>u.email!==email))} onEditUser={adminEditarUsuario} cupons={cupons} onAddCoupon={adicionarCupom} onRemoveCoupon={removerCupom} listaNewsletter={newsletter} mensagens={mensagens} onResolverMensagem={resolverMensagem}/>} />
-          
           <Route path="/register" element={<Register onRegister={registrarUsuario} />} />
-          <Route path="/login" element={<Login onLogin={loginUsuario} />} />
-          
+          {/* Passando a função recuperarSenha para o componente Login */}
+          <Route path="/login" element={<Login onLogin={loginUsuario} onRecoverPassword={recuperarSenha} />} />
           <Route path="/profile" element={<Profile user={userLogado} onLogout={logoutUsuario} onUpdateUser={atualizarUsuario} favoritos={favoritos} pedidos={pedidos} enderecos={enderecos} onSaveAddress={salvarEndereco} onRemoveAddress={removerEndereco}/>} />
-          
           <Route path="/about" element={<About />} />
           <Route path="/contact" element={<Contact onSendMessage={enviarMensagemContato} />} />
           <Route path="/tracking" element={<Tracking pedidos={pedidos} />} />
