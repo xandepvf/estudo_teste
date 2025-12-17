@@ -23,12 +23,6 @@ import { Tracking } from './pages/Tracking';
 
 import { PRODUTOS_INICIAIS } from './data';
 
-// --- SERVIÇOS FIREBASE (Descomente quando configurar o backend) ---
-// import { db, auth, initAuth, getPublicCollection, getUserCollection } from './services/firebase';
-// import { onSnapshot, addDoc, doc, setDoc } from 'firebase/firestore';
-// import { onAuthStateChanged } from 'firebase/auth';
-
-// Função auxiliar segura para ler do localStorage
 const carregarDados = (chave, valorPadrao) => {
   try {
     const item = localStorage.getItem(chave);
@@ -46,8 +40,15 @@ function ScrollToTop() {
 }
 
 function App() {
-  // --- ESTADOS COM CARREGAMENTO SEGURO (LocalStorage) ---
-  // Se usar Firebase, inicie como [] ou null e deixe o useEffect preencher
+  // --- CONFIGURAÇÃO DA LOJA (WHITE LABEL) ---
+  const [configLoja, setConfigLoja] = useState(() => carregarDados('loja_config', {
+      nome: "Minha Loja Premium",
+      emailContato: "contato@loja.com",
+      telefone: "(11) 99999-9999",
+      corPrincipal: "#c5a065",
+      moeda: "BRL"
+  }));
+
   const [produtos, setProdutos] = useState(() => carregarDados('loja_produtos', PRODUTOS_INICIAIS));
   const [usuarios, setUsuarios] = useState(() => carregarDados('loja_usuarios', []));
   const [userLogado, setUserLogado] = useState(() => carregarDados('loja_sessao', null));
@@ -56,31 +57,17 @@ function App() {
   const [pedidos, setPedidos] = useState(() => carregarDados('loja_pedidos', []));
   const [avaliacoes, setAvaliacoes] = useState(() => carregarDados('loja_avaliacoes', []));
   
-  // Marketing & Suporte
   const [cupons, setCupons] = useState(() => carregarDados('loja_cupons', [{codigo: 'BEMVINDO10', desconto: 10}]));
   const [newsletter, setNewsletter] = useState(() => carregarDados('loja_newsletter', []));
   const [mensagens, setMensagens] = useState(() => carregarDados('loja_mensagens', []));
-  
-  // Logística (Endereços Salvos)
   const [enderecos, setEnderecos] = useState(() => carregarDados('loja_enderecos', []));
   const [recentes, setRecentes] = useState(() => carregarDados('loja_recentes', []));
 
   const [termoBusca, setTermoBusca] = useState("");
   const [toastMsg, setToastMsg] = useState(null);
 
-  // --- EFEITO 1: INICIALIZAÇÃO FIREBASE (Exemplo) ---
-  /*
-  useEffect(() => {
-    const setup = async () => {
-      // await initAuth(); 
-    };
-    setup();
-    // const unsubscribe = onAuthStateChanged(auth, (u) => setUserLogado(u));
-    // return () => unsubscribe();
-  }, []);
-  */
-
-  // --- PERSISTÊNCIA (LocalStorage - Remova se usar Firebase) ---
+  // --- PERSISTÊNCIA ---
+  useEffect(() => { localStorage.setItem('loja_config', JSON.stringify(configLoja)); }, [configLoja]);
   useEffect(() => { localStorage.setItem('loja_produtos', JSON.stringify(produtos)); }, [produtos]);
   useEffect(() => { localStorage.setItem('loja_usuarios', JSON.stringify(usuarios)); }, [usuarios]);
   useEffect(() => { localStorage.setItem('loja_carrinho', JSON.stringify(carrinho)); }, [carrinho]);
@@ -92,7 +79,11 @@ function App() {
   useEffect(() => { localStorage.setItem('loja_enderecos', JSON.stringify(enderecos)); }, [enderecos]);
   useEffect(() => { localStorage.setItem('loja_recentes', JSON.stringify(recentes)); }, [recentes]);
   
-  // Sincroniza favoritos com o usuário logado
+  // Atualiza CSS Variables dinamicamente baseado na config
+  useEffect(() => {
+      document.documentElement.style.setProperty('--accent-color', configLoja.corPrincipal);
+  }, [configLoja]);
+
   useEffect(() => {
     if (userLogado) {
       const usuariosAtualizados = usuarios.map(u => u.email === userLogado.email ? { ...u, favoritosSalvos: favoritos } : u);
@@ -102,9 +93,14 @@ function App() {
     } else {
        localStorage.setItem('loja_favoritos', JSON.stringify(favoritos));
     }
-  }, [favoritos, userLogado]); // Removido 'usuarios' da dependência para evitar loop
+  }, [favoritos, userLogado]);
 
-  // --- FUNÇÕES ---
+  // --- FUNÇÕES DE NEGÓCIO ---
+  const atualizarConfiguracao = (novaConfig) => {
+      setConfigLoja({ ...configLoja, ...novaConfig });
+      setToastMsg("Configurações da loja atualizadas!");
+  };
+
   const enviarMensagemContato = (msg) => {
       setMensagens([{ ...msg, id: Date.now(), data: new Date().toLocaleDateString(), status: 'Pendente' }, ...mensagens]);
       setToastMsg("Mensagem enviada com sucesso!");
@@ -147,17 +143,12 @@ function App() {
       return false; 
   };
 
-  // --- FUNÇÃO DE RECUPERAÇÃO DE SENHA ---
   const recuperarSenha = (email) => {
       const usuarioExiste = usuarios.some(u => u.email === email);
-      
       if (usuarioExiste) {
-          // Simulação de envio de e-mail (em produção usaria um serviço de backend)
-          console.log(`[SIMULAÇÃO] Enviando e-mail de recuperação para: ${email}`);
           setToastMsg(`Um link de recuperação foi enviado para ${email}.`);
           return true;
       } else {
-          // Por segurança, geralmente não se diz se o e-mail não existe, mas aqui para UX:
           setToastMsg("E-mail não encontrado na nossa base.");
           return false;
       }
@@ -186,8 +177,14 @@ function App() {
   const adicionarCupom = (n) => { setCupons([...cupons, n]); setToastMsg("Cupom criado!"); };
   const removerCupom = (c) => { setCupons(cupons.filter(x=>x.codigo!==c)); setToastMsg("Removido."); };
   const assinarNewsletter = (e) => { if(!newsletter.includes(e)){setNewsletter([...newsletter,e]); setToastMsg("Inscrito!");} else setToastMsg("Já na lista."); };
+  
   const adicionarProdutoNovo = (p) => { setProdutos([{...p, estoque: Number(p.estoque)||10}, ...produtos]); setToastMsg("Criado!"); };
   const removerProduto = (id) => { setProdutos(produtos.filter(p => p.id !== id)); setToastMsg("Removido."); };
+  
+  const editarProduto = (p) => {
+      setProdutos(produtos.map(prod => prod.id === p.id ? p : prod));
+      setToastMsg("Produto atualizado!");
+  };
   
   const toggleFavorito = (p) => { 
       if(favoritos.some(f=>f.id===p.id)) { 
@@ -248,7 +245,9 @@ function App() {
       <ScrollToTop />
       <TopBar />
       <div className="d-flex flex-column min-vh-100">
-        <Navbar cartCount={carrinho.reduce((a,b)=>a+b.quantidade,0)} favCount={favoritos.length} onSearch={setTermoBusca} userLogado={userLogado} produtos={produtos}/>
+        {/* Passando configLoja para a Navbar */}
+        <Navbar cartCount={carrinho.reduce((a,b)=>a+b.quantidade,0)} favCount={favoritos.length} onSearch={setTermoBusca} userLogado={userLogado} configLoja={configLoja}/>
+        
         <Routes>
           <Route path="/" element={<Home produtos={produtos} addToCart={adicionarAoCarrinho} onSubscribe={assinarNewsletter} produtosRecentes={recentes} />} />
           <Route path="/catalogo" element={<Catalog produtos={produtos.filter(p=>p.nome.toLowerCase().includes(termoBusca.toLowerCase()))} addToCart={adicionarAoCarrinho} onProductView={adicionarAosRecentes} />} />
@@ -256,17 +255,37 @@ function App() {
           <Route path="/carrinho" element={<Cart cartItems={carrinho} updateQty={atualizarQtd} removeFromCart={removerDoCarrinho} produtos={produtos} addToCart={adicionarAoCarrinho}/>} />
           <Route path="/wishlist" element={<Wishlist favoritos={favoritos} toggleFav={toggleFavorito} />} />
           <Route path="/checkout" element={<Checkout cartItems={carrinho} onPlaceOrder={realizarPedido} notify={setToastMsg} cuponsDisponiveis={cupons}/>} />
-          <Route path="/admin" element={<Admin onAddProduct={adicionarProdutoNovo} onRemoveProduct={removerProduto} pedidos={pedidos} produtos={produtos} onUpdateStatus={atualizarStatusPedido} userLogado={userLogado} listaUsuarios={usuarios} onRemoveUser={(email)=>setUsuarios(usuarios.filter(u=>u.email!==email))} onEditUser={adminEditarUsuario} cupons={cupons} onAddCoupon={adicionarCupom} onRemoveCoupon={removerCupom} listaNewsletter={newsletter} mensagens={mensagens} onResolverMensagem={resolverMensagem}/>} />
+          
+          <Route path="/admin" element={<Admin 
+              onAddProduct={adicionarProdutoNovo} 
+              onRemoveProduct={removerProduto} 
+              onEditProduct={editarProduto}
+              onUpdateConfig={atualizarConfiguracao} // NOVA FUNÇÃO PASSADA
+              configLoja={configLoja}               // ESTADO PASSADO
+              pedidos={pedidos} 
+              produtos={produtos} 
+              onUpdateStatus={atualizarStatusPedido} 
+              userLogado={userLogado} 
+              listaUsuarios={usuarios} 
+              onRemoveUser={(email)=>setUsuarios(usuarios.filter(u=>u.email!==email))} 
+              onEditUser={adminEditarUsuario} 
+              cupons={cupons} 
+              onAddCoupon={adicionarCupom} 
+              onRemoveCoupon={removerCupom} 
+              listaNewsletter={newsletter} 
+              mensagens={mensagens} 
+              onResolverMensagem={resolverMensagem}
+          />} />
+          
           <Route path="/register" element={<Register onRegister={registrarUsuario} />} />
-          {/* Passando a função recuperarSenha para o componente Login */}
           <Route path="/login" element={<Login onLogin={loginUsuario} onRecoverPassword={recuperarSenha} />} />
           <Route path="/profile" element={<Profile user={userLogado} onLogout={logoutUsuario} onUpdateUser={atualizarUsuario} favoritos={favoritos} pedidos={pedidos} enderecos={enderecos} onSaveAddress={salvarEndereco} onRemoveAddress={removerEndereco}/>} />
           <Route path="/about" element={<About />} />
-          <Route path="/contact" element={<Contact onSendMessage={enviarMensagemContato} />} />
+          <Route path="/contact" element={<Contact onSendMessage={enviarMensagemContato} configLoja={configLoja} />} />
           <Route path="/tracking" element={<Tracking pedidos={pedidos} />} />
           <Route path="*" element={<NotFound />} />
         </Routes>
-        <Footer />
+        <Footer configLoja={configLoja} />
         <WhatsAppButton />
         <ScrollButton />
         {toastMsg && <Toast msg={toastMsg} onClose={() => setToastMsg(null)} />}
